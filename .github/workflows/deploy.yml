@@ -1,0 +1,166 @@
+# Vercel Deployment
+# =================
+# Deploys the site to Vercel using CLI.
+#
+# Triggers:
+# - Push to main: Production deployment
+# - PR (ready for review): Preview deployment
+#
+# Required secrets:
+# - VERCEL_TOKEN: Personal access token from Vercel dashboard
+# - VERCEL_ORG_ID: Your Vercel account/org ID
+# - VERCEL_PROJECT_ID: The Vercel project ID
+# - SENTRY_AUTH_TOKEN: Sentry auth token with project:releases scope
+# - SENTRY_ORG: Sentry organization slug
+# - SENTRY_PROJECT: Sentry project slug
+#
+# Setup instructions:
+# 1. Run `vercel` in project root to create/link project
+# 2. Get VERCEL_ORG_ID and VERCEL_PROJECT_ID from .vercel/project.json
+# 3. Generate VERCEL_TOKEN at https://vercel.com/account/tokens
+# 4. Add all as GitHub repository secrets
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    # Skip draft PRs
+    if: github.event.pull_request.draft != true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pull Vercel environment (Preview)
+        if: github.event_name == 'pull_request'
+        run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Pull Vercel environment (Production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: npx vercel build ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          # Pass release version for Sentry SDK
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
+
+      - name: Deploy Preview
+        if: github.event_name == 'pull_request'
+        id: deploy-preview
+        run: |
+          url=$(npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} \
+            -m githubDeployment="1" \
+            -m githubCommitRef="${{ github.head_ref }}" \
+            -m githubCommitSha="${{ github.sha }}" \
+            -m githubCommitOrg="${{ github.repository_owner }}" \
+            -m githubCommitRepo="${{ github.event.repository.name }}" \
+            -m githubCommitAuthorLogin="${{ github.actor }}" \
+            -m githubPrId="${{ github.event.pull_request.number }}")
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      - name: Deploy Production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: deploy-production
+        run: |
+          url=$(npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} \
+            -m githubDeployment="1" \
+            -m githubCommitRef="${{ github.ref_name }}" \
+            -m githubCommitSha="${{ github.sha }}" \
+            -m githubCommitOrg="${{ github.repository_owner }}" \
+            -m githubCommitRepo="${{ github.event.repository.name }}" \
+            -m githubCommitAuthorLogin="${{ github.actor }}")
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      # Sentry source map upload for production deployments
+      - name: Create Sentry release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          npx sentry-cli releases new "${{ github.sha }}"
+          npx sentry-cli releases set-commits "${{ github.sha }}" --auto
+
+      - name: Upload source maps to Sentry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          npx sentry-cli sourcemaps upload \
+            --release="${{ github.sha }}" \
+            --url-prefix='~/' \
+            .vercel/output/static
+
+      - name: Finalize Sentry release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: npx sentry-cli releases finalize "${{ github.sha }}"
+
+      - name: Comment Preview URL on PR
+        if: github.event_name == 'pull_request' && steps.deploy-preview.outputs.url
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy-preview.outputs.url }}';
+            const body = `## Preview Deployment\n\n**URL:** ${url}\n\n_Deployed commit: \`${{ github.sha }}\`_`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview Deployment')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }

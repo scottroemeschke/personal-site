@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Auto-fix formatting via lint-staged
+pnpm lint-staged

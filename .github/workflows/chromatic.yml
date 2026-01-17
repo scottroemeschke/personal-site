@@ -1,0 +1,63 @@
+# Chromatic Visual Testing
+# ========================
+# Runs visual regression tests on PRs that touch visual code.
+# Requires CHROMATIC_PROJECT_TOKEN secret to be set.
+#
+# Snapshot optimization:
+# - Path filtering: Only runs when src/components or .storybook changes
+# - TurboSnap: Only tests components affected by changes (not all stories)
+# - Skip on draft PRs: Saves snapshots until PR is ready for review
+
+name: Chromatic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only run when visual-affecting files change
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'src/**/*.stories.tsx'
+      - '.storybook/**'
+      - 'tailwind.config.*'
+      - 'postcss.config.*'
+  pull_request:
+    paths:
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'src/**/*.stories.tsx'
+      - '.storybook/**'
+      - 'tailwind.config.*'
+      - 'postcss.config.*'
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    # Skip on draft PRs to save snapshots
+    if: github.event.pull_request.draft != true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for TurboSnap git history
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          buildScriptName: storybook:build
+          onlyChanged: true # TurboSnap - only test changed components
+          autoAcceptChanges: main # Auto-accept baselines on main branch
+          exitZeroOnChanges: false # Block PR until visual changes approved
