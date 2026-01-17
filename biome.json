@@ -60,12 +60,6 @@
     }
   },
   "files": {
-    "ignore": [
-      "node_modules",
-      "dist",
-      "build",
-      "coverage",
-      "*.min.js"
-    ]
+    "ignore": ["node_modules", "dist", "build", "coverage", "*.min.js"]
   }
 }

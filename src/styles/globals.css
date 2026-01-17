@@ -46,7 +46,7 @@
 
   body {
     @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
-    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+    font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
     font-feature-settings: "liga" 1, "calt" 1;
   }
 
@@ -59,25 +59,25 @@
 @layer utilities {
   /* Neon glow effects */
   .glow-cyan {
-    box-shadow: 0 0 10px theme('colors.cyan.500/30'),
-                0 0 20px theme('colors.cyan.500/20'),
-                0 0 40px theme('colors.cyan.500/10');
+    /* cyan-500: #06b6d4 */
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.3), 0 0 20px rgba(6, 182, 212, 0.2), 0 0 40px
+      rgba(6, 182, 212, 0.1);
   }
 
   .glow-magenta {
-    box-shadow: 0 0 10px theme('colors.fuchsia.500/30'),
-                0 0 20px theme('colors.fuchsia.500/20'),
-                0 0 40px theme('colors.fuchsia.500/10');
+    /* fuchsia-500: #d946ef */
+    box-shadow: 0 0 10px rgba(217, 70, 239, 0.3), 0 0 20px rgba(217, 70, 239, 0.2), 0 0 40px
+      rgba(217, 70, 239, 0.1);
   }
 
   .text-glow-cyan {
-    text-shadow: 0 0 10px theme('colors.cyan.400/50'),
-                 0 0 20px theme('colors.cyan.400/30');
+    /* cyan-400: #22d3ee */
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.5), 0 0 20px rgba(34, 211, 238, 0.3);
   }
 
   /* Scanline overlay */
   .scanlines::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: repeating-linear-gradient(
@@ -92,10 +92,19 @@
 
   /* CRT flicker animation */
   @keyframes flicker {
-    0%, 100% { opacity: 1; }
-    92% { opacity: 1; }
-    93% { opacity: 0.8; }
-    94% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 1;
+    }
+    93% {
+      opacity: 0.8;
+    }
+    94% {
+      opacity: 1;
+    }
   }
 
   .crt-flicker {
@@ -104,11 +113,22 @@
 
   /* Glitch effect */
   @keyframes glitch {
-    0%, 100% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
+    0%,
+    100% {
+      transform: translate(0);
+    }
+    20% {
+      transform: translate(-2px, 2px);
+    }
+    40% {
+      transform: translate(-2px, -2px);
+    }
+    60% {
+      transform: translate(2px, 2px);
+    }
+    80% {
+      transform: translate(2px, -2px);
+    }
   }
 
   .glitch:hover {

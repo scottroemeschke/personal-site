@@ -118,10 +118,7 @@ export function dockItemClicked(appId: string): AnalyticsEvent {
  * User clicked an external link in TASTE.links.
  */
 export function externalLinkClicked(platform: string, url: string): AnalyticsEvent {
-  return createEvent('external_link_clicked')
-    .prop('platform', platform)
-    .prop('url', url)
-    .build()
+  return createEvent('external_link_clicked').prop('platform', platform).prop('url', url).build()
 }
 
 /**

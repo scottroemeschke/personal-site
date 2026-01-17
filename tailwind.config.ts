@@ -54,7 +54,7 @@ const config: Config = {
           from: { opacity: '0', transform: 'scale(0.95)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
-        'scanline': {
+        scanline: {
           from: { transform: 'translateY(-100%)' },
           to: { transform: 'translateY(100%)' },
         },
@@ -63,7 +63,7 @@ const config: Config = {
         'fade-in': 'fade-in 0.2s ease-out',
         'slide-up': 'slide-up 0.3s ease-out',
         'window-open': 'window-open 0.2s ease-out',
-        'scanline': 'scanline 8s linear infinite',
+        scanline: 'scanline 8s linear infinite',
       },
       backdropBlur: {
         xs: '2px',

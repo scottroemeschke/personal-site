@@ -1,0 +1,6 @@
+export { Desktop } from './Desktop'
+export { DesktopBackground } from './DesktopBackground'
+export { DesktopIcon } from './DesktopIcon'
+export { DesktopIconGrid } from './DesktopIconGrid'
+export { Dock } from './Dock'
+export { DockItem } from './DockItem'

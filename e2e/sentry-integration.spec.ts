@@ -13,10 +13,7 @@ import { expect, test } from '@playwright/test'
  * to verify the error appeared.
  */
 test.describe('Sentry Integration', () => {
-  test.skip(
-    !process.env.VITE_SENTRY_DSN,
-    'Skipping Sentry test - VITE_SENTRY_DSN not configured'
-  )
+  test.skip(!process.env.VITE_SENTRY_DSN, 'Skipping Sentry test - VITE_SENTRY_DSN not configured')
 
   test('reports errors to Sentry', async ({ page }) => {
     const testId = process.env.TEST_ID || `local-${Date.now()}`
